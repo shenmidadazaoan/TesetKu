@@ -1,9 +1,7 @@
 <template>
   <div class="main">
     <div id="box">
-      <div class="app">
-        <suspensionBall />
-      </div>
+      <div class="app"></div>
       <main id="left">
         <ul>
           <div>群组聊天( 当前人数：{{ userCount }} )</div>
@@ -11,17 +9,33 @@
         </ul>
         <ul>
           <div>用户列表：</div>
-          <li :class="item.online ? 'isLine' : 'notLine'" v-for="(item, index) in userlist" :key="index"
-            @click="choiceUser(item)">{{ item.username }}</li>
+          <li
+            :class="item.online ? 'isLine' : 'notLine'"
+            v-for="(item, index) in userlist"
+            :key="index"
+            @click="choiceUser(item)"
+          >
+            {{ item.username }}
+          </li>
         </ul>
       </main>
       <div id="right">
         <div id="chatHeader">{{ chatUser.username }}</div>
+
         <el-main id="chatBody">
-          <div v-for="(item, index) in messageList[chatUser.email]" :key="index">
+          <div
+            v-for="(item, index) in messageList[chatUser.email]"
+            :key="index"
+          >
             <div class="time" v-if="item.showTime">{{ item.time }}</div>
-            <div :class="item.from == username ? 'comment-box-we' : 'comment-box-other'">
-              <div class="comment-username" v-if="item.type == 'group'">{{ emailMap[item.from] }}</div>
+            <div
+              :class="
+                item.from == username ? 'comment-box-we' : 'comment-box-other'
+              "
+            >
+              <div class="comment-username" v-if="item.type == 'group'">
+                {{ emailMap[item.from] }}
+              </div>
               <div class="comment-container">
                 <div class="comment" v-html="item.message"></div>
               </div>
@@ -29,58 +43,64 @@
           </div>
         </el-main>
         <div id="chatFooter" @keypress="keypressFun">
-          <el-input id="areaMsg" type="textarea" :rows="2" placeholder="请输入内容" v-model="sendMessage">
+          <el-input
+            id="areaMsg"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入内容"
+            v-model="sendMessage"
+          >
           </el-input>
-          <el-button type="primary" id="sendBtn" @click="send">发送消息</el-button>
+          <el-button type="primary" id="sendBtn" @click="send"
+            >发送消息</el-button
+          >
         </div>
       </div>
     </div>
   </div>
 </template>
 <script>
-import {dbUtil,ChatDB} from "@/utils/chatDB";
+import { dbUtil, ChatDB } from "@/utils/chatDB";
 let socket;
-import suspensionBall from './suspension.vue';
+import suspensionBall from "./suspension.vue";
 export default {
-  name: 'app',
+  name: "app",
   components: {
-    suspensionBall
+    suspensionBall,
   },
   data() {
     return {
-      chatDB:null,
+      chatDB: null,
       ip: "",
       sendMessage: "",
       chatUser: {
         username: "群组聊天",
-        email: "group"
+        email: "group",
       },
       userlist: [],
       emailMap: {},
       messageList: {
-        page:{}
+        page: {},
       },
       username: "",
       isCollapse: false,
       userCount: 0,
-      justTime: {}
-    }
+      justTime: {},
+    };
   },
   mounted() {
-    document.title = "聊天室"
-    this.username = this.$route.params.email
-    this.ip = localStorage.getItem("ip")
-    this.chatDB = new ChatDB("chat","chatMessage");
+    document.title = "聊天室";
+    this.username = this.$route.params.email;
+    this.ip = localStorage.getItem("ip");
+    this.chatDB = new ChatDB("chat", "chatMessage");
     this.getStoreData();
     if (!this.username) {
-      this.$message({ type: "warning", message: "暂未登录，请重新登录" })
-      this.$router.push("/login")
+      this.$message({ type: "warning", message: "暂未登录，请重新登录" });
+      this.$router.push("/login");
     }
-    this.init()
+    this.init();
   },
-  computed: {
-
-  },
+  computed: {},
   methods: {
     //初始化，进行websocket的链接
     /**
@@ -92,7 +112,7 @@ export default {
      *  最后触发scrollFun()事件，让条滚到底部
      */
     init() {
-      if (typeof (WebSocket) == "undefined") {
+      if (typeof WebSocket == "undefined") {
         console.log("您的浏览器不支持WebSocket");
       } else {
         console.log("您的浏览器支持WebSocket");
@@ -108,64 +128,74 @@ export default {
         socket.onmessage = (msg) => {
           let data = JSON.parse(msg.data);
           if (data.type == "system") {
-            this.getUserList(data.users)
-            this.userCount = data.count
+            this.getUserList(data.users);
+            this.userCount = data.count;
           } else {
-            if(data.type == "group"){
-              this.addMessageList(data.to,data)
-            }else{
-              this.addMessageList(data.from,data)
+            if (data.type == "group") {
+              this.addMessageList(data.to, data);
+            } else {
+              this.addMessageList(data.from, data);
             }
-            this.scrollFun()
+            this.scrollFun();
           }
         };
         //关闭事件
-        socket.onclose = function () {
-        };
+        socket.onclose = function () {};
         //发生了错误事件
-        socket.onerror = function () {
-        }
+        socket.onerror = function () {};
       }
     },
     //发送消息
     send() {
       if (!this.chatUser.email) {
-        this.$message({ type: 'warning', message: "请选择聊天对象" })
+        this.$message({ type: "warning", message: "请选择聊天对象" });
         return;
       }
       if (!this.sendMessage) {
-        this.$message({ type: 'warning', message: "请输入内容" })
+        this.$message({ type: "warning", message: "请输入内容" });
         return;
       }
-      if (typeof (WebSocket) == "undefined") {
+      if (typeof WebSocket == "undefined") {
         console.log("您的浏览器不支持WebSocket");
       } else {
         let message;
         let to;
         if (this.chatUser.email == "group") {
-          to = "group"
+          to = "group";
           message = {
             type: "group",
-            to:"group",
-            message: this.sendMessage
-          }
+            to: "group",
+            message: this.sendMessage,
+          };
         } else {
-          to = this.chatUser.email
+          to = this.chatUser.email;
           message = {
             type: "single",
             to: this.chatUser.email,
-            message: this.sendMessage
-          }
+            message: this.sendMessage,
+          };
         }
         let showTime = this.showTime(to);
         socket.send(JSON.stringify(message));
         let h = new Date();
-        let time = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, 0)}-${String(h.getDate()).padStart(2, 0)} ${String(h.getHours()).padStart(2, 0)}:${String(h.getMinutes()).padStart(2, 0)}`
-        let send_data = { from: this.username,to, message: this.sendMessage,time, type: message.type,showTime};
-        this.addMessageList(to,send_data)
-        this.sendMessage = '';
+        let time = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(
+          2,
+          0
+        )}-${String(h.getDate()).padStart(2, 0)} ${String(
+          h.getHours()
+        ).padStart(2, 0)}:${String(h.getMinutes()).padStart(2, 0)}`;
+        let send_data = {
+          from: this.username,
+          to,
+          message: this.sendMessage,
+          time,
+          type: message.type,
+          showTime,
+        };
+        this.addMessageList(to, send_data);
+        this.sendMessage = "";
       }
-      this.scrollFun("send")
+      this.scrollFun("send");
     },
     /**
      * ["username","username"]
@@ -173,107 +203,115 @@ export default {
      * 用于将邮箱映射为名字，获取用户列表
      */
     getUserList(webList) {
-      let onlineUser = new Set()
-      webList.forEach(item => {
-        onlineUser.add(item.username)
-      })
-      this.$axios.get("/chat/user/list").then(res => {
-        let arr = res.data.data
+      let onlineUser = new Set();
+      webList.forEach((item) => {
+        onlineUser.add(item.username);
+      });
+      this.$axios.get("/chat/user/list").then((res) => {
+        let arr = res.data.data;
         let reLogin = false;
         let map = {};
         arr.forEach((item) => {
-          delete item.password
-          map[item.email] = item.username
-          item.online = onlineUser.has(item.email)
+          delete item.password;
+          map[item.email] = item.username;
+          item.online = onlineUser.has(item.email);
           if (item.email == this.username) {
-            reLogin = true
+            reLogin = true;
           }
-        })
+        });
         if (!reLogin) {
-          this.$router.replace("/login")
+          this.$router.replace("/login");
         }
-        this.emailMap = map
-        this.userlist = arr
-      })
+        this.emailMap = map;
+        this.userlist = arr;
+      });
     },
     //数据持久化，将消息储存到本地
-    messageStoreToDB(data){
-      this.chatDB.insertData(data)
+    messageStoreToDB(data) {
+      this.chatDB.insertData(data);
     },
     //进行初始化
-    getStoreData(){
-      this.chatDB.selectData("to_user","group").then(data=>{
-        this.addMessageList("group",data.list)
-      })
+    getStoreData() {
+      this.chatDB.selectData("to_user", "group").then((data) => {
+        this.addMessageList("group", data.list);
+      });
     },
-    //是否显示时间
+    //是否显示时间www
     showTime(name) {
-      let nowTime = new Date().getTime() / 1000
-      let bool = (nowTime - (this.justTime[name] ? this.justTime[name] : 0) > 1200)
-      this.$set(this.justTime,name,nowTime)
-      return bool
+      let nowTime = new Date().getTime() / 1000;
+      let bool =
+        nowTime - (this.justTime[name] ? this.justTime[name] : 0) > 1200;
+      this.$set(this.justTime, name, nowTime);
+      return bool;
     },
     //选择用户
     choiceUser(item) {
-      this.sendMessage = ""
+      this.sendMessage = "";
       if (item) {
-        this.chatUser = { username: item.username, email: item.email }
+        this.chatUser = { username: item.username, email: item.email };
       } else {
-        this.chatUser = { username: "群组聊天", email: "group" }
+        this.chatUser = { username: "群组聊天", email: "group" };
       }
     },
     //将消息添加到对象列表中
-    addMessageList(key,value){
+    addMessageList(key, value) {
       //判断是否是消息列表
-      if(value instanceof Array){
-        if(this.messageList[key]){
-          this.messageList[key].push(value)
-          this.messageList.page[key].count += value.length
-          this.messageList.page[key].page++ 
-        }else{
-          this.$set(this.messageList,key,value)
-          this.messageList.page[key] = {count:value.length,page:1}
+      if (value instanceof Array) {
+        if (this.messageList[key]) {
+          this.messageList[key].push(value);
+          this.messageList.page[key].count += value.length;
+          this.messageList.page[key].page++;
+        } else {
+          this.$set(this.messageList, key, value);
+          this.messageList.page[key] = { count: value.length, page: 1 };
         }
-        return
-      }else{
-        if(this.messageList[key]){
-          this.messageList[key].push(value)
-          this.messageList.page[key].count++
-        }else{
-          this.$set(this.messageList,key,[value])
-          this.messageList.page[key] = {count:1,page:1}
+        return;
+      } else {
+        if (this.messageList[key]) {
+          this.messageList[key].push(value);
+          this.messageList.page[key].count++;
+        } else {
+          this.$set(this.messageList, key, [value]);
+          this.messageList.page[key] = { count: 1, page: 1 };
         }
-        this.messageStoreToDB(value)
+        this.messageStoreToDB(value);
       }
-      
-      console.log(this.messageList)
+
+      console.log(this.messageList);
     },
     //发送消息直接到底部
     scrollFun(type) {
-      let scrollHeight1 = chatBody.scrollHeight
-      let scrollTop1 = chatBody.scrollTop
-      let height = chatBody.clientHeight
+      let scrollHeight1 = chatBody.scrollHeight;
+      let scrollTop1 = chatBody.scrollTop;
+      let height = chatBody.clientHeight;
       if (type == "send") {
         this.$nextTick(() => {
-          chatBody.scrollBy(0, chatBody.scrollHeight)
-        })
+          chatBody.scrollBy(0, chatBody.scrollHeight);
+        });
       } else {
         this.$nextTick(() => {
-          let scrollHeight2 = chatBody.scrollHeight
+          let scrollHeight2 = chatBody.scrollHeight;
           if (scrollHeight1 - scrollTop1 <= height) {
-            chatBody.scrollBy(0, scrollHeight2)
+            chatBody.scrollBy(0, scrollHeight2);
           }
-        })
+        });
       }
     },
     //ctrl+enter发送消息
     keypressFun(event) {
       if (event.ctrlKey && event.code == "Enter") {
-        this.send()
+        this.send();
       }
     },
-  }
-}
+    // 判断用户布尔值
+    // item.from == username ? false : true
+    isCommentFromUser(item, username) {
+      console.log();
+
+      return item.from === username;
+    },
+  },
+};
 </script>
 
 <style>
@@ -311,7 +349,6 @@ export default {
   margin: 0.6rem;
   padding: 0.25rem 1rem;
   /* display: inline-block; */
-
 }
 
 .isLine {
@@ -347,7 +384,10 @@ ul {
 }
 
 #chatFooter {
-  background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.7));
+  background: linear-gradient(
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.7)
+  );
   box-shadow: 0rem -0.3rem 0.5rem rgba(255, 255, 255, 1);
   height: 25vh;
 }
@@ -380,9 +420,9 @@ ul {
   overflow-x: hidden;
 }
 
-#chatBody .time{
-  text-align:center;
-  margin:2rem 0 ;
+#chatBody .time {
+  text-align: center;
+  margin: 2rem 0;
   color: white;
 }
 
@@ -391,23 +431,25 @@ ul {
   box-sizing: border-box;
   margin-bottom: 1rem;
   /* 确保内边距和边框不会增加元素的外部尺寸 */
-
+}
+/* 给其他用户消息框空出头像位置*/
+.comment-box-other {
+  margin-left: 4.5rem;
+}
+/* 给本人用户消息框空出头像位置*/
+.comment-box-we {
+  margin-right: 4.5rem;
 }
 
 .comment-box-other .comment-container {
-  max-width: 100%;
   text-align: left;
-
 }
 
 .comment-box-we .comment-container {
-  width: 100%;
   text-align: right;
 }
 
-
 .comment-username {
-  /* width: 150px; */
   margin-bottom: 0.3rem;
   margin-top: 1rem;
   /* 添加底部外边距以分隔评论数据和评论内容 */
@@ -459,7 +501,7 @@ ul {
   we为自己发送的消息
 */
 .comment:after {
-  content: '';
+  content: "";
   width: 0;
   height: 0;
   position: absolute;
